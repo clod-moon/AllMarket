@@ -2,6 +2,8 @@ package model
 
 import "time"
 
+
+
 type Bian struct {
 	Id 			 int       `gorm:"primary_key;type:int(11);AUTO_INCREMENT`
 	//Ticker     string    `json:"ticker" gorm:"type:varchar(30);not null"`
@@ -18,17 +20,17 @@ type Bian struct {
 	UpdateTime   time.Time `gorm:"type:datetime;not null;"`
 }
 
-func GetBian()  {
-	var list []Bian
-	db.Find(&list)
-
-	for _,v := range list{
-		ticker := DealBiMap[v.DealBiId]+StandardBiMap[v.StandardBiId]
-		BianMap[ticker] = v
-	}
-}
+//func GetBian()  {
+//	var list []Bian
+//	DBHd.Find(&list)
+//
+//	for _,v := range list{
+//		ticker := DealBiMap[v.DealBiId]+StandardBiMap[v.StandardBiId]
+//		BianMap[ticker] = v
+//	}
+//}
 
 
 func (h *Bian) Update() {
-	db.Update(h)
+	DBHd.Update(h)
 }

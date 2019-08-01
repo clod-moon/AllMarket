@@ -2,6 +2,7 @@ package model
 
 import "time"
 
+
 type Huobi struct {
 	Id 			 int       `gorm:"primary_key;type:int(11);AUTO_INCREMENT`
 	//Ticker     string    `json:"ticker" gorm:"type:varchar(30);not null"`
@@ -18,17 +19,17 @@ type Huobi struct {
 	UpdateTime   time.Time `gorm:"type:datetime;not null;"`
 }
 
-func GetHuoBi()  {
-	var list []Huobi
-	db.Find(&list)
-
-	for _,v := range list{
-		ticker := DealBiMap[v.DealBiId]+StandardBiMap[v.StandardBiId]
-		HuobiMap[ticker] = v
-	}
-}
+//func GetHuoBi()  {
+//	var list []Huobi
+//	DBHd.Find(&list)
+//
+//	for _,v := range list{
+//		ticker := DealBiMap[v.DealBiId]+StandardBiMap[v.StandardBiId]
+//		HuobiMap[ticker] = v
+//	}
+//}
 
 
 func (h *Huobi) Update() {
-	db.Update(h)
+	DBHd.Update(h)
 }
