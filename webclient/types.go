@@ -10,10 +10,12 @@ type pingData struct {
 	Ping int64 `json:"ping"`
 }
 
-type subData struct {
+type huobiSubData struct {
 	Sub string `json:"sub"`
 	ID  string `json:"id"`
 }
+
+
 
 type reqData struct {
 	Req string `json:"req"`

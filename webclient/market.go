@@ -8,13 +8,14 @@ import (
 	"github.com/bitly/go-simplejson"
 	"sync"
 	"github.com/wonderivan/logger"
+	"AllMarket/model"
 )
 
 // Endpoint 行情的Websocket入口
-var Endpoint = "wss://api.huobi.pro/ws"
-
-// ConnectionClosedError Websocket未连接错误
-var ConnectionClosedError = fmt.Errorf("websocket connection closed")
+var (
+	// ConnectionClosedError Websocket未连接错误
+	ConnectionClosedError = fmt.Errorf("websocket connection closed")
+)
 
 type wsOperation struct {
 	cmd  string
@@ -22,8 +23,8 @@ type wsOperation struct {
 }
 
 type Market struct {
-	ws *SafeWebSocket
-
+	ws                *SafeWebSocket
+	market            model.SrcMarket
 	listeners         map[string]Listener
 	listenerMutex     sync.Mutex
 	subscribedTopic   map[string]bool
@@ -46,8 +47,9 @@ type Market struct {
 type Listener = func(topic string, json *simplejson.Json)
 
 // NewMarket 创建Market实例
-func NewMarket() (m *Market, err error) {
+func NewMarket(market model.SrcMarket) (m *Market, err error) {
 	m = &Market{
+		market:            market,
 		HeartbeatInterval: 5 * time.Second,
 		ReceiveTimeout:    10 * time.Second,
 		ws:                nil,
@@ -68,7 +70,8 @@ func NewMarket() (m *Market, err error) {
 // connect 连接
 func (m *Market) connect() error {
 	logger.Debug("connecting")
-	ws, err := NewSafeWebSocket(Endpoint)
+
+	ws, err := NewSafeWebSocket(m.market.WsUrl)
 	if err != nil {
 		return err
 	}
@@ -100,10 +103,10 @@ func (m *Market) reconnect() error {
 	}
 	m.listenerMutex.Unlock()
 
-	for topic, listener := range listeners {
-		delete(m.subscribedTopic, topic)
-		m.Subscribe(topic, listener)
-	}
+	//for topic, listener := range listeners {
+	//	delete(m.subscribedTopic, topic)
+		//m.Subscribe(topic, listener)
+	//}
 	return nil
 }
 
@@ -221,27 +224,28 @@ func (m *Market) handlePing(ping pingData) (err error) {
 }
 
 // Subscribe 订阅
-func (m *Market) Subscribe(topic string, listener Listener) error {
-	logger.Debug("subscribe", topic)
+func (m *Market) Subscribe(ticker,topic string, listener Listener) error {
+	//logger.Debug("subscribe", topic)
 
 	var isNew = false
 
 	// 如果未曾发送过订阅指令，则发送，并等待订阅操作结果，否则直接返回
-	if _, ok := m.subscribedTopic[topic]; !ok {
-		m.subscribeResultCb[topic] = make(jsonChan)
-		m.sendMessage(subData{ID: topic, Sub: topic})
+	if _, ok := m.subscribedTopic[ticker]; !ok {
+		m.subscribeResultCb[ticker] = make(jsonChan)
+		//m.sendMessage(huobiSubData{ID: topic, Sub: topic})
+		m.ws.Send([]byte(topic))
 		isNew = true
 	} else {
 		logger.Debug("send subscribe before, reset listener only")
 	}
 
 	m.listenerMutex.Lock()
-	m.listeners[topic] = listener
+	m.listeners[ticker] = listener
 	m.listenerMutex.Unlock()
-	m.subscribedTopic[topic] = true
+	m.subscribedTopic[ticker] = true
 
 	if isNew {
-		var json = <-m.subscribeResultCb[topic]
+		var json = <-m.subscribeResultCb[ticker]
 		// 判断订阅结果，如果出错则返回出错信息
 		if msg, err := json.Get("err-msg").String(); err == nil {
 			return fmt.Errorf(msg)

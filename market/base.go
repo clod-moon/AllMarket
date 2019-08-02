@@ -10,11 +10,15 @@ import (
 type JSON = simplejson.Json
 
 var (//
+
+	HuobiEndpoint = "wss://api.huobi.pro/ws"
+
+	OkexEndpoint = "wss://real.okex.com:10442/ws/v3"
+
 	TickerList []string
 )
 
 func getAllTicker() {
-	i:= 1
 	for value, _ := range model.StandardBiMap {
 		for v, _ := range model.DealBiMap {
 			if v != value {
@@ -34,16 +38,9 @@ func getAllTicker() {
 				v = strings.ToLower(v)
 				ticker := fmt.Sprintf("%s%s", v, value)
 				TickerList = append(TickerList, ticker)
-				model.HuobiMap[ticker] = huobi
-				model.BianMap[ticker] = bian
-				model.OkexMap[ticker] = okex
-				huobi.Id = i
-				bian.Id = i
-				okex.Id = i
-				//model.DBHd.Create(huobi)
-				//model.DBHd.Create(bian)
-				//model.DBHd.Create(okex)
-				i++
+				//model.HuobiMap[ticker] = huobi
+				//model.BianMap[ticker] = bian
+				//model.OkexMap[ticker] = okex
 			}
 		}
 	}
