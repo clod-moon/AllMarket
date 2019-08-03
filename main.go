@@ -3,9 +3,12 @@ package main
 import (
 	"AllMarket/model"
 	"AllMarket/market"
+	"sync"
 )
 
-
+var(
+	wg sync.WaitGroup
+)
 
 func init() {
 
@@ -18,7 +21,12 @@ func init() {
 
 func main() {
 
-	market.GetHuobiMarket()
+	//wg.Add(1)
+	//go market.GetHuobiMarket()
 
+	wg.Add(1)
+	go market.GetOkexMarket()
+
+	wg.Wait()
 	return
 }

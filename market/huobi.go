@@ -27,24 +27,25 @@ func swapHuobiMarket(h, tmph *model.Huobi) {
 
 func GetHuobiMarket() {
 
+	logger.Debug("111111111")
 	srcMarket,ok:=model.SrcMarketMap["huobi"]
 	if !ok{
 		logger.Error("can not find huobi")
 		return
 	}
-
+	logger.Debug("NewMarket")
 	market, err := webclient.NewMarket(srcMarket)
 	if err != nil {
 		panic(err)
 	}
-
-	for _, ticker := range TickerList {
-		topic := fmt.Sprintf("market.%s.detail", ticker)
+	logger.Debug("NewMarket end")
+	//ticker := "btcusdt"
+	for _, ticker := range HuobiTickerList {
+		//topic := fmt.Sprintf("market.%s.detail", ticker)
 		//fmt.Println("topic:",topic)
 		//var huobi model.Huobi
 		//model.HuobiMap[topic] = huobi
-		market.Subscribe(ticker,topic, func(topic string, resp *JSON) {
-
+		market.Subscribe(ticker, func(topic string, resp *JSON) {
 			modelHuoBi ,ok:= model.HuobiMap[ticker]
 			if !ok{
 				logger.Error("can not find ticke:",ticker)
@@ -65,7 +66,7 @@ func GetHuobiMarket() {
 				return
 			}
 			swapHuobiMarket(&modelHuoBi,&tmpHuobi)
-			//fmt.Println("----------------->modelHuoBi:",modelHuoBi)
+			fmt.Println("----------------->modelHuoBi:",modelHuoBi)
 			modelHuoBi.Update()
 		})
 	}

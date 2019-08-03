@@ -5,45 +5,35 @@ import (
 	"strings"
 	"fmt"
 	"AllMarket/model"
+	"github.com/wonderivan/logger"
 )
 
 type JSON = simplejson.Json
 
 var (//
-
+	//wss://www.hbdm.com/ws
 	HuobiEndpoint = "wss://api.huobi.pro/ws"
 
 	OkexEndpoint = "wss://real.okex.com:10442/ws/v3"
 
-	TickerList []string
+	HuobiTickerList []string
+	OkexTickerList  []string
 )
 
 func getAllTicker() {
 	for value, _ := range model.StandardBiMap {
 		for v, _ := range model.DealBiMap {
 			if v != value {
-				var huobi model.Huobi
-				var bian model.Bian
-				var okex model.Okex
-
-				huobi.StandardBiId = model.StandardBiMap[value]
-				bian.StandardBiId = model.StandardBiMap[value]
-				okex.StandardBiId = model.StandardBiMap[value]
-
-				huobi.DealBiId = model.DealBiMap[v]
-				bian.DealBiId = model.DealBiMap[v]
-				okex.DealBiId = model.DealBiMap[v]
-
-				value = strings.ToLower(value)
-				v = strings.ToLower(v)
-				ticker := fmt.Sprintf("%s%s", v, value)
-				TickerList = append(TickerList, ticker)
-				//model.HuobiMap[ticker] = huobi
-				//model.BianMap[ticker] = bian
-				//model.OkexMap[ticker] = okex
+				lowerValue := strings.ToLower(value)
+				lowerV := strings.ToLower(v)
+				ticker := fmt.Sprintf("%s%s", lowerV, lowerValue)
+				HuobiTickerList = append(HuobiTickerList, ticker)
+				ticker = fmt.Sprintf("%s-%s",v,value)
+				OkexTickerList = append(OkexTickerList,ticker)
 			}
 		}
 	}
+	logger.Debug("getAllTicker")
 	return
 }
 

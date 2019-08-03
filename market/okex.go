@@ -2,35 +2,39 @@ package market
 
 import (
 	"AllMarket/webclient"
-	"fmt"
 	"AllMarket/model"
 	//"regexp"
 	"github.com/wonderivan/logger"
 	"encoding/json"
 	"strconv"
+	"time"
+	"fmt"
 )
 
 var (
-	//regx = regexp.MustCompile(`market.([a-zA-Z]+).detail`)
+//regx = regexp.MustCompile(`market.([a-zA-Z]+).detail`)
 
-	//OkexEndpoint = "wss://real.okex.com:10442/ws/v3"
+//OkexEndpoint = "wss://real.okex.com:10442/ws/v3"
 )
 
-func swapOkexMarket(h, tmph *model.Huobi) {
-	h.Open = tmph.Open
-	h.Close = tmph.Close
-	h.Amount = tmph.Amount
-	h.High = tmph.High
-	h.Low = tmph.Low
-	h.Count = tmph.Count
-	h.Vol = tmph.Vol
-	h.Rose, _ = strconv.ParseFloat(fmt.Sprintf("%.2f", (h.Open-h.Close)/h.Open*100+0.005), 64)
+type Okex struct {
+	Open      string    `json:"open_24h"`
+	Close     string    `json:"last" `
+	Low       string    `json:"low_24h"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
+func swapOkexMarket(o *model.Okex, tmpO *Okex) {
+	o.Open, _ = strconv.ParseFloat(tmpO.Open, 64)
+	o.Close, _ = strconv.ParseFloat(tmpO.Close, 64)
+	o.Low, _ = strconv.ParseFloat(tmpO.Low, 64)
+	o.Rose, _ = strconv.ParseFloat(fmt.Sprintf("%.2f", (o.Open-o.Close)/o.Open*100+0.005), 64)
 }
 
 func GetOkexMarket() {
 
-	srcMarket,ok:=model.SrcMarketMap["okex"]
-	if !ok{
+	srcMarket, ok := model.SrcMarketMap["okex"]
+	if !ok {
 		logger.Error("can not find okex")
 		return
 	}
@@ -40,14 +44,13 @@ func GetOkexMarket() {
 		panic(err)
 	}
 	//"{\"op\": \"subscribe\", \"args\": [\"index/ticker:BTC-USD\",\"index/ticker:ETH-USD\"]}"
-	for _, ticker := range TickerList {
-		topic := fmt.Sprintf("market.%s.detail", ticker)
+	for _, ticker := range OkexTickerList {
 
-		market.Subscribe(ticker,topic, func(topic string, resp *JSON) {
+		market.Subscribe(ticker, func(topic string, resp *JSON) {
 
-			modelHuoBi ,ok:= model.HuobiMap[topic]
-			if !ok{
-				logger.Error("can not find ticke:",topic)
+			modelOkex, ok := model.OkexMap[ticker]
+			if !ok {
+				logger.Error("can not find ticke:", ticker)
 				return
 			}
 
@@ -58,15 +61,15 @@ func GetOkexMarket() {
 				logger.Error(err.Error())
 				return
 			}
-			var tmpHuobi model.Huobi
-			err = json.Unmarshal(tick, &tmpHuobi)
+			var tmpOkex Okex
+			err = json.Unmarshal(tick, &tmpOkex)
 			if err != nil {
 				logger.Error(err.Error())
 				return
 			}
-			swapOkexMarket(&modelHuoBi,&tmpHuobi)
+			swapOkexMarket(&modelOkex, &tmpOkex)
 			//fmt.Println("----------------->modelHuoBi:",modelHuoBi)
-			modelHuoBi.Update()
+			modelOkex.Update()
 		})
 	}
 

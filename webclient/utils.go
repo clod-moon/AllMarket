@@ -2,10 +2,11 @@ package webclient
 
 import (
 	"bytes"
-	"compress/gzip"
+	//"compress/gzip"
 	"io/ioutil"
 	"math/rand"
 	"time"
+	"compress/flate"
 )
 
 var letterRunes = []rune("1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
@@ -26,9 +27,7 @@ func getUinxMillisecond() int64 {
 
 // unGzipData 解压gzip的数据
 func unGzipData(buf []byte) ([]byte, error) {
-	r, err := gzip.NewReader(bytes.NewBuffer(buf))
-	if err != nil {
-		return nil, err
-	}
+	r := flate.NewReader(bytes.NewReader(buf))
+	defer r.Close()
 	return ioutil.ReadAll(r)
 }

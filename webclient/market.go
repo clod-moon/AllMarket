@@ -9,12 +9,14 @@ import (
 	"sync"
 	"github.com/wonderivan/logger"
 	"AllMarket/model"
+	"regexp"
 )
 
 // Endpoint 行情的Websocket入口
 var (
 	// ConnectionClosedError Websocket未连接错误
 	ConnectionClosedError = fmt.Errorf("websocket connection closed")
+	regx = regexp.MustCompile(`market.([a-zA-Z]+).detail`)
 )
 
 type wsOperation struct {
@@ -136,6 +138,9 @@ func (m *Market) handleMessageLoop() {
 			return
 		}
 
+		resp,_:= json.Encode()
+
+		logger.Debug("resp:",string(resp))
 		// 处理ping消息
 		if ping := json.Get("ping").MustInt64(); ping > 0 {
 			m.handlePing(pingData{Ping: ping})
@@ -151,7 +156,12 @@ func (m *Market) handleMessageLoop() {
 		// 处理订阅消息
 		if ch := json.Get("ch").MustString(); ch != "" {
 			m.listenerMutex.Lock()
-			listener, ok := m.listeners[ch]
+			tick := regx.FindStringSubmatch(ch)
+			if len(tick) < 2{
+				logger.Error("订阅返回tick错误:",ch)
+				return
+			}
+			listener, ok := m.listeners[tick[1]]
 			m.listenerMutex.Unlock()
 			if ok {
 				//logger.Debug("handleSubscribe", json)
@@ -160,9 +170,30 @@ func (m *Market) handleMessageLoop() {
 			return
 		}
 
+		if table := json.Get("table").MustString(); table =="index/ticker"{
+			for i:=0;i<len(json.Get("data").MustArray());i++{
+				tick := json.Get("data").GetIndex(i).Get("instrument_id").MustString()
+				if tick !=""{
+					listener, ok := m.listeners[tick]
+					if ok{
+						m.listenerMutex.Lock()
+						listener(tick, json.Get("data").GetIndex(i))
+						m.listenerMutex.Unlock()
+					}
+				}
+
+			}
+			return
+		}
+
 		// 处理订阅成功通知
 		if subbed := json.Get("subbed").MustString(); subbed != "" {
-			c, ok := m.subscribeResultCb[subbed]
+			tick := regx.FindStringSubmatch(subbed)
+			if len(tick) < 2{
+				logger.Error("订阅返回tick错误:",subbed)
+				return
+			}
+			c, ok := m.subscribeResultCb[tick[1]]
 			if ok {
 				c <- json
 			}
@@ -182,7 +213,12 @@ func (m *Market) handleMessageLoop() {
 		if status := json.Get("status").MustString(); status == "error" {
 			// 判断是否为订阅失败
 			id := json.Get("id").MustString()
-			c, ok := m.subscribeResultCb[id]
+			tick := regx.FindStringSubmatch(id)
+			if len(tick) < 2{
+				logger.Error("订阅返回tick错误:",id)
+				return
+			}
+			c, ok := m.subscribeResultCb[tick[1]]
 			if ok {
 				c <- json
 			}
@@ -224,28 +260,35 @@ func (m *Market) handlePing(ping pingData) (err error) {
 }
 
 // Subscribe 订阅
-func (m *Market) Subscribe(ticker,topic string, listener Listener) error {
+func (m *Market) Subscribe(topic string, listener Listener) error {
 	//logger.Debug("subscribe", topic)
 
 	var isNew = false
 
 	// 如果未曾发送过订阅指令，则发送，并等待订阅操作结果，否则直接返回
-	if _, ok := m.subscribedTopic[ticker]; !ok {
-		m.subscribeResultCb[ticker] = make(jsonChan)
+	if _, ok := m.subscribedTopic[topic]; !ok {
+		m.subscribeResultCb[topic] = make(jsonChan)
 		//m.sendMessage(huobiSubData{ID: topic, Sub: topic})
-		m.ws.Send([]byte(topic))
+		var subStr string
+		if m.market.Name == "huobi"{
+			subStr = fmt.Sprintf(m.market.Template,topic,topic)
+		}else if  m.market.Name == "okex"{
+			subStr = fmt.Sprintf(m.market.Template,topic)
+		}
+		fmt.Println("subStr:",subStr)
+		m.ws.Send([]byte(subStr))
 		isNew = true
 	} else {
 		logger.Debug("send subscribe before, reset listener only")
 	}
 
 	m.listenerMutex.Lock()
-	m.listeners[ticker] = listener
+	m.listeners[topic] = listener
 	m.listenerMutex.Unlock()
-	m.subscribedTopic[ticker] = true
+	m.subscribedTopic[topic] = true
 
 	if isNew {
-		var json = <-m.subscribeResultCb[ticker]
+		var json = <-m.subscribeResultCb[topic]
 		// 判断订阅结果，如果出错则返回出错信息
 		if msg, err := json.Get("err-msg").String(); err == nil {
 			return fmt.Errorf(msg)

@@ -7,6 +7,7 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	"fmt"
 	"log"
+	"github.com/wonderivan/logger"
 )
 
 type JSON = simplejson.Json
@@ -15,7 +16,7 @@ var (
 	username string = "root"
 	password string = "root"
 	dbName   string = "market"
-	host     string = "192.168.1.216"
+	host     string = "192.168.0.103"
 	port     int    = 3306
 
 	DBHd          *gorm.DB
@@ -53,6 +54,7 @@ func Init() {
 
 	GetHuoBi()
 
+	logger.Debug("model Init")
 	//FillSrcMarket()
 	//FillHuobi()
 }
